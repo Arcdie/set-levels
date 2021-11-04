@@ -38,6 +38,10 @@ const {
   getUserLevelBounds,
 } = require('./trading-helper/get-user-level-bounds');
 
+const {
+  getActiveInstruments,
+} = require('./trading-helper/get-active-instruments');
+
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -153,7 +157,7 @@ const start = async () => {
   console.log('Process was finished');
 };
 
-const askQuestion = async (nameStep) => {
+const askQuestion = (nameStep) => {
   if (nameStep === 'whereCScalpFolder') {
     rl.question('Укажите полный путь к папке cscalp\n', userAnswer => {
       if (!userAnswer) {
@@ -174,7 +178,7 @@ const askQuestion = async (nameStep) => {
   }
 
   if (nameStep === 'userName') {
-    rl.question('Укажите ваш логин на сайте\n', userAnswer => {
+    rl.question('Укажите ваш логин на сайте\n', async userAnswer => {
       if (!userAnswer) {
         console.log('Вы ничего не ввели');
         return askQuestion('userName');

@@ -10,4 +10,4 @@
 .git/
 .DS_Store
 Thumbs.db
-/*.bat
+/settings.json
