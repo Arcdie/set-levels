@@ -47,6 +47,8 @@ const rl = readline.createInterface({
   output: process.stdout,
 });
 
+let percentForSignalLevels = false;
+
 const start = async () => {
   if (!settings.pathToCscalpFolder) {
     return askQuestion('whereCScalpFolder');
@@ -61,6 +63,10 @@ const start = async () => {
 
   if (!settings.userName || !settings.userId) {
     return askQuestion('userName');
+  }
+
+  if (!percentForSignalLevels) {
+    return askQuestion('percentForSignalLevels');
   }
 
   // get active instruments
@@ -114,6 +120,7 @@ const start = async () => {
     instrumentDoc.user_level_bounds = userLevelBounds
       .filter(bound => bound.instrument_id === instrumentDoc._id)
       .map(bound => ({
+        is_long: bound.is_long,
         created_at: bound.created_at,
         level_price: bound.level_price,
       }));
@@ -132,10 +139,26 @@ const start = async () => {
       instrumentName = instrumentName.replace('PERP', '');
     }
 
-    let validString = '';
+
+
+    let validStringForLevels = '';
+    let validStringForSignalLevels = '';
     instrumentDoc.user_level_bounds.forEach(bound => {
       const validDate = moment(bound.created_at).format('DD.MM.YYYY');
-      validString += `${bound.level_price}/${validDate};`;
+
+      let lpd;
+      let signalLevelPrice = bound.level_price * (percentForSignalLevels / 100);
+
+      if (bound.is_long) {
+        lpd = -signalLevelPrice;
+        signalLevelPrice = bound.level_price - signalLevelPrice;
+      } else {
+        lpd = signalLevelPrice;
+        signalLevelPrice = bound.level_price + signalLevelPrice;
+      }
+
+      validStringForLevels += `${bound.level_price}/${validDate};`;
+      validStringForSignalLevels += `sp=${signalLevelPrice}!it=False!lpd=${lpd}!itt=;`;
     });
 
     filesNames.forEach(async fileName => {
@@ -146,7 +169,8 @@ const start = async () => {
       const fileContent = fs.readFileSync(`${pathToSettingsFolder}/${fileName}`, 'utf8');
       const parsedContent = await xml2js.parseStringPromise(fileContent);
 
-      parsedContent.Settings.DOM[0].UserLevels[0].$.Value = validString;
+      parsedContent.Settings.DOM[0].UserLevels[0].$.Value = validStringForLevels;
+      parsedContent.Settings.DOM[0].UserSignalPriceLevels[0].$.Value = validStringForSignalLevels;
 
       const builder = new xml2js.Builder();
       const xml = builder.buildObject(parsedContent);
@@ -172,6 +196,28 @@ const askQuestion = (nameStep) => {
 
       settings.pathToCscalpFolder = userAnswer;
       updateSettings();
+
+      return start();
+    });
+  }
+
+  if (nameStep === 'percentForSignalLevels') {
+    rl.question('В скольки процентах от основного уровня добавить сигнальный уровень?\n', userAnswer => {
+      if (!userAnswer) {
+        console.log('Вы ничего не ввели');
+        return askQuestion('percentForSignalLevels');
+      }
+
+      userAnswer = userAnswer.replace('%', '');
+      userAnswer = parseInt(userAnswer, 10);
+
+      if (Number.isNaN(userAnswer)
+        || userAnswer <= 0) {
+        console.log('Невалидные данные');
+        return askQuestion('percentForSignalLevels');
+      }
+
+      percentForSignalLevels = userAnswer;
 
       return start();
     });
