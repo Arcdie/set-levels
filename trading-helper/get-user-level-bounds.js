@@ -5,7 +5,7 @@ const getUserLevelBounds = async ({
 }) => {
   const responseGetData = await axios({
     method: 'get',
-    url: `http://91.240.242.90/api/user-level-bounds?userId=${userId}&isWorked=false`,
+    url: `https://trading-helper.ru/api/user-level-bounds?userId=${userId}&isWorked=false`,
     headers: {
       'Content-Type': 'application/json',
     },
